@@ -3,9 +3,8 @@ import { Component } from '@angular/core';
 @Component({
   selector: 'app-bar-example',
   template: `
-  <h3>Bar Example (custom size)</h3>
-  <ngx-chartjs type="bar" [data]="data" width="300" height="300" [options]="options"></ngx-chartjs>
-  `,
+    <ngx-chartjs type="bar" [data]="data" width="300" height="300" [options]="options"></ngx-chartjs>
+  `
 })
 export class BarExampleComponent {
   data = {
@@ -22,7 +21,7 @@ export class BarExampleComponent {
           'rgba(75, 192, 192, 0.2)',
           'rgba(54, 162, 235, 0.2)',
           'rgba(153, 102, 255, 0.2)',
-          'rgba(201, 203, 207, 0.2)',
+          'rgba(201, 203, 207, 0.2)'
         ],
         borderColor: [
           'rgb(255, 99, 132)',
@@ -31,14 +30,14 @@ export class BarExampleComponent {
           'rgb(75, 192, 192)',
           'rgb(54, 162, 235)',
           'rgb(153, 102, 255)',
-          'rgb(201, 203, 207)',
+          'rgb(201, 203, 207)'
         ],
-        borderWidth: 1,
-      },
-    ],
+        borderWidth: 1
+      }
+    ]
   };
   options = {
     maintainAspectRatio: false,
-    scales: { yAxes: [{ ticks: { beginAtZero: true } }] },
+    scales: { yAxes: [{ ticks: { beginAtZero: true } }] }
   };
 }

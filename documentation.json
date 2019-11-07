@@ -1,0 +1,1803 @@
+{
+    "pipes": [],
+    "interfaces": [
+        {
+            "name": "ChartClickEvent",
+            "id": "interface-ChartClickEvent-cb6492b63476903f2f1e116c403d5169",
+            "file": "src/lib/chartjs.component.ts",
+            "type": "interface",
+            "sourceCode": "import {\n  AfterViewInit,\n  ChangeDetectionStrategy,\n  Component,\n  ElementRef,\n  EventEmitter,\n  Input,\n  NgZone,\n  OnChanges,\n  Output,\n  ViewChild,\n} from '@angular/core';\nimport {\n  ChartData,\n  ChartLegendOptions,\n  ChartOptions,\n  ChartType,\n} from 'chart.js';\n\ndeclare var require: any;\n\n@Component({\n  selector: 'ngx-chartjs',\n  template: `\n  <!-- wrapping div required for height, width to work -->\n  <div>\n    <canvas\n      #ref\n      [attr.height]=\"height\"\n      [attr.width]=\"width\"\n      (click)=\"handleOnClick($event)\"\n    ></canvas>\n  </div>\n  `,\n  changeDetection: ChangeDetectionStrategy.OnPush,\n})\nexport class ChartjsComponent implements AfterViewInit, OnChanges {\n  chartInstance: any;\n  @ViewChild('ref', { static: true }) ref: ElementRef<HTMLCanvasElement>;\n  @Output() chartClick = new EventEmitter<ChartClickEvent>();\n  /** chart type */\n  @Input() type: ChartType | string = 'doughnut';\n  @Input() data: ChartData | any;\n  @Input() height = 150;\n  @Input() width = 300;\n  @Input()\n  legend: ChartLegendOptions | any = {\n    display: true,\n    position: 'bottom',\n  };\n  @Input() options: ChartOptions | any = {};\n  @Input() plugins: any[];\n  @Input() redraw = false;\n  @Input() datasetKeyProvider: (x: any) => string = d => d.label;\n\n  constructor(private zone: NgZone) {}\n\n  ngAfterViewInit() {\n    this.renderChart();\n  }\n  ngOnChanges(changes: any) {\n    if (changes.firstChange) {\n      return;\n    }\n    if (this.chartInstance && this.redraw) {\n      this.chartInstance.destroy();\n      this.renderChart();\n      return;\n    }\n    this.updateChart();\n  }\n\n  updateChart() {\n    const data = this.transformData();\n\n    if (!this.chartInstance) {\n      return;\n    }\n\n    if (this.options) {\n      // in order to allow for universal rendering, we import chart.js runtime with `require` to prevent node errors\n      const Chart = require('chart.js');\n      this.chartInstance.options = (Chart as any).helpers.configMerge(\n        this.chartInstance.options,\n        this.options,\n      );\n    }\n\n    // Pipe datasets to chart instance datasets enabling\n    // seamless transitions\n    const currentDatasets: any[] =\n      (this.chartInstance.config.data &&\n        this.chartInstance.config.data.datasets) ||\n      [];\n    const nextDatasets = data.datasets || [];\n\n    const currentDatasetsIndexed = {};\n    currentDatasets.forEach((x) => {\n      currentDatasetsIndexed[this.datasetKeyProvider(x)] = x;\n    });\n\n    // We can safely replace the dataset array, as long as we retain the _meta property\n    // on each dataset.\n    this.chartInstance.config.data.datasets = nextDatasets.map(next => {\n      const current = currentDatasetsIndexed[this.datasetKeyProvider(next)];\n\n      if (current && current.type === next.type) {\n        // Reassign all properties from next\n        for (const nextProp of Object.keys(next)) {\n          // Data array can't be reassigned here.\n          if (nextProp !== 'data') {\n            current[nextProp] = next[nextProp];\n          }\n        }\n        // Remove properties from current if they was removed in next\n        for (const currentProp of Object.keys(current)) {\n          // Be careful with _meta property\n          if (!next.hasOwnProperty(currentProp) && currentProp !== '_meta') {\n            delete current[currentProp];\n          }\n        }\n        // The data array must be edited in place. As chart.js adds listeners to it.\n        current.data.splice(next.data.length);\n        next.data.forEach((point, pid) => {\n          current.data[pid] = next.data[pid];\n        });\n\n        return current;\n      }\n      return next;\n    });\n\n    const { datasets, ...rest } = data;\n\n    this.chartInstance.config.data = {\n      ...this.chartInstance.config.data,\n      ...rest,\n    };\n\n    this.chartInstance.update();\n  }\n\n  renderChart() {\n    const node = this.ref.nativeElement;\n    const data = this.transformData();\n\n    if (typeof this.legend !== 'undefined') {\n      const legendOptions = { ...this.legend, ...this.options.legend };\n      this.options.legend = legendOptions;\n    }\n\n    // in order to allow for universal rendering, we import Codemirror runtime with `require` to prevent node errors\n    const Chart = require('chart.js');\n\n    this.zone.runOutsideAngular(() => {\n      this.chartInstance = new Chart(node, {\n        type: this.type,\n        data,\n        options: this.options,\n        plugins: this.plugins,\n      });\n    });\n  }\n\n  transformData() {\n    if (!this.data) {\n      return;\n    }\n    if (typeof this.data === 'function') {\n      const node = this.ref;\n      return this.data(node);\n    }\n    return this.data;\n  }\n\n  handleOnClick($event: Event) {\n    this.chartClick.emit({\n      elements: this.chartInstance.getElementsAtEvent($event),\n      element: this.chartInstance.getElementAtEvent($event),\n      dataset: this.chartInstance.getDatasetAtEvent($event),\n      $event,\n    });\n  }\n}\n\nexport interface ChartClickEvent {\n  elements: any[];\n  element: any;\n  dataset: any[];\n  $event: Event;\n}\n",
+            "properties": [
+                {
+                    "name": "$event",
+                    "type": "Event",
+                    "optional": false,
+                    "description": "",
+                    "line": 190
+                },
+                {
+                    "name": "dataset",
+                    "type": "any[]",
+                    "optional": false,
+                    "description": "",
+                    "line": 189
+                },
+                {
+                    "name": "element",
+                    "type": "any",
+                    "optional": false,
+                    "description": "",
+                    "line": 188
+                },
+                {
+                    "name": "elements",
+                    "type": "any[]",
+                    "optional": false,
+                    "description": "",
+                    "line": 187
+                }
+            ],
+            "indexSignatures": [],
+            "kind": 150,
+            "methods": []
+        }
+    ],
+    "injectables": [],
+    "classes": [],
+    "directives": [],
+    "components": [
+        {
+            "name": "AppComponent",
+            "id": "component-AppComponent-0ed517e5fedcb660aa7a4916fb274da1",
+            "file": "src/app/app.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-root",
+            "styleUrls": [],
+            "styles": [],
+            "templateUrl": [
+                "./app.component.html"
+            ],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [],
+            "methodsClass": [],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component } from '@angular/core';\n\n@Component({\n  selector: 'app-root',\n  templateUrl: './app.component.html',\n})\nexport class AppComponent {\n\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": "",
+            "templateData": "<div>\n  <hr>\n  <app-doughnut-example></app-doughnut-example>\n  <hr>\n  <app-dynamic-doughnut-example></app-dynamic-doughnut-example>\n  <hr>\n  <app-pie-example></app-pie-example>\n  <hr>\n  <app-line-example></app-line-example>\n  <hr>\n  <app-bar-example></app-bar-example>\n  <hr>\n  <app-horizontal-bar-example></app-horizontal-bar-example>\n  <hr>\n  <app-radar-example></app-radar-example>\n  <hr>\n  <app-polar-example></app-polar-example>\n  <hr>\n  <app-bubble-example></app-bubble-example>\n  <hr>\n  <app-scatter-example></app-scatter-example>\n  <hr>\n  <app-mixed-data-example></app-mixed-data-example>\n  <hr>\n  <app-randomized-data-line-example></app-randomized-data-line-example>\n  <hr>\n  <app-crazy-data-line-example></app-crazy-data-line-example>\n  <hr>\n  <app-legend-options-example></app-legend-options-example>\n  <hr>\n  <app-legend-handlers-example></app-legend-handlers-example>\n</div>\n"
+        },
+        {
+            "name": "BarExampleComponent",
+            "id": "component-BarExampleComponent-c670d9dfba53bf7ddddac411cb5e4375",
+            "file": "src/app/bar-example/bar-example.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-bar-example",
+            "styleUrls": [],
+            "styles": [],
+            "template": "<h3>Bar Example (custom size)</h3>\n<ngx-chartjs type=\"bar\" [data]=\"data\" width=\"300\" height=\"300\" [options]=\"options\"></ngx-chartjs>\n",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "data",
+                    "defaultValue": "{\n    labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],\n    datasets: [\n      {\n        label: 'My First Dataset',\n        data: [65, 59, 80, 81, 56, 55, 40],\n        fill: false,\n        backgroundColor: [\n          'rgba(255, 99, 132, 0.2)',\n          'rgba(255, 159, 64, 0.2)',\n          'rgba(255, 205, 86, 0.2)',\n          'rgba(75, 192, 192, 0.2)',\n          'rgba(54, 162, 235, 0.2)',\n          'rgba(153, 102, 255, 0.2)',\n          'rgba(201, 203, 207, 0.2)',\n        ],\n        borderColor: [\n          'rgb(255, 99, 132)',\n          'rgb(255, 159, 64)',\n          'rgb(255, 205, 86)',\n          'rgb(75, 192, 192)',\n          'rgb(54, 162, 235)',\n          'rgb(153, 102, 255)',\n          'rgb(201, 203, 207)',\n        ],\n        borderWidth: 1,\n      },\n    ],\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 11
+                },
+                {
+                    "name": "options",
+                    "defaultValue": "{\n    maintainAspectRatio: false,\n    scales: { yAxes: [{ ticks: { beginAtZero: true } }] },\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 40
+                }
+            ],
+            "methodsClass": [],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component } from '@angular/core';\n\n@Component({\n  selector: 'app-bar-example',\n  template: `\n  <h3>Bar Example (custom size)</h3>\n  <ngx-chartjs type=\"bar\" [data]=\"data\" width=\"300\" height=\"300\" [options]=\"options\"></ngx-chartjs>\n  `,\n})\nexport class BarExampleComponent {\n  data = {\n    labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],\n    datasets: [\n      {\n        label: 'My First Dataset',\n        data: [65, 59, 80, 81, 56, 55, 40],\n        fill: false,\n        backgroundColor: [\n          'rgba(255, 99, 132, 0.2)',\n          'rgba(255, 159, 64, 0.2)',\n          'rgba(255, 205, 86, 0.2)',\n          'rgba(75, 192, 192, 0.2)',\n          'rgba(54, 162, 235, 0.2)',\n          'rgba(153, 102, 255, 0.2)',\n          'rgba(201, 203, 207, 0.2)',\n        ],\n        borderColor: [\n          'rgb(255, 99, 132)',\n          'rgb(255, 159, 64)',\n          'rgb(255, 205, 86)',\n          'rgb(75, 192, 192)',\n          'rgb(54, 162, 235)',\n          'rgb(153, 102, 255)',\n          'rgb(201, 203, 207)',\n        ],\n        borderWidth: 1,\n      },\n    ],\n  };\n  options = {\n    maintainAspectRatio: false,\n    scales: { yAxes: [{ ticks: { beginAtZero: true } }] },\n  };\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": ""
+        },
+        {
+            "name": "BubbleExampleComponent",
+            "id": "component-BubbleExampleComponent-05069a1d3d320dc03bf3b86147dceaf8",
+            "file": "src/app/bubble-example/bubble-example.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-bubble-example",
+            "styleUrls": [],
+            "styles": [],
+            "template": "<h3>Bubble Example</h3>\n<ngx-chartjs [data]=\"data\" type=\"bubble\" [legend]=\"legend\" [options]=\"options\"></ngx-chartjs>\n",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "data",
+                    "defaultValue": "{\n    datasets: [\n      {\n        data: [\n          {\n            x: -0.7298096707819184,\n            y: 14.870541838134443,\n            v: 54.95970507544581,\n          },\n          {\n            x: -52.115483539094654,\n            y: 76.71789266117969,\n            v: 23.799725651577504,\n          },\n          {\n            x: -6.857638888888886,\n            y: 19.930984224965727,\n            v: 323.6582647462277,\n          },\n          {\n            x: -10.78960905349794,\n            y: -51.323516803840874,\n            v: 371.20198902606313,\n          },\n          {\n            x: 40.25527263374485,\n            y: -32.878943758573385,\n            v: 583.0975651577503,\n          },\n          {\n            x: 0.44367283950614933,\n            y: -70.56862997256515,\n            v: 376.0116598079561,\n          },\n          {\n            x: -26.057741769547334,\n            y: -60.22590877914952,\n            v: 166.61093964334705,\n          },\n          {\n            x: 64.91769547325103,\n            y: -147.6841135116598,\n            v: 371.56207133058984,\n          },\n          {\n            x: -122.4633487654321,\n            y: 21.223422496570635,\n            v: 407.53172153635114,\n          },\n          { x: 15.965792181069958, y: 50.66336591220852, v: 691.1865569272977 },\n          { x: 84.37178497942386, y: 44.80238340192042, v: 639.193244170096 },\n          {\n            x: -63.078703703703695,\n            y: -142.19285836762688,\n            v: 668.2184499314129,\n          },\n          { x: -72.2190072016461, y: 93.8443072702332, v: 194.92884087791495 },\n          {\n            x: -88.88245884773663,\n            y: -142.91945301783264,\n            v: 635.9910836762689,\n          },\n          { x: -8.90239197530866, y: 1.6825274348422568, v: 408.0718449931413 },\n          {\n            x: 21.88786008230454,\n            y: -118.18308470507544,\n            v: 927.8377914951989,\n          },\n        ],\n      },\n      {\n        data: [\n          {\n            x: -142.34503600823047,\n            y: -148.34962277091907,\n            v: 611.9555898491084,\n          },\n          {\n            x: -147.4344135802469,\n            y: 15.349579903978054,\n            v: 877.0919067215364,\n          },\n          {\n            x: -139.2136059670782,\n            y: -22.918810013717433,\n            v: 139.9134087791495,\n          },\n          { x: -13.51594650205763, y: 91.01187414266118, v: 817.0867626886146 },\n          { x: 83.8252314814815, y: -38.69170096021948, v: 325.2786351165981 },\n          { x: 6.976594650205783, y: -57.86286865569272, v: 81.1556927297668 },\n          {\n            x: -139.8951903292181,\n            y: -112.3349622770919,\n            v: 501.3846021947874,\n          },\n          {\n            x: -2.6234567901234698,\n            y: -97.94131515775034,\n            v: 2.632030178326475,\n          },\n          { x: 22.95846193415636, y: 89.48473936899865, v: 1.5646433470507546 },\n          { x: 41.01723251028807, y: 54.109867969821664, v: 914.8491083676269 },\n          {\n            x: -94.28047839506172,\n            y: -99.89926268861454,\n            v: 159.15209190672152,\n          },\n          {\n            x: -28.768004115226333,\n            y: -18.375985939643357,\n            v: 151.14026063100135,\n          },\n          { x: 91.7213220164609, y: -97.15363511659808, v: 307.48028120713303 },\n          {\n            x: -128.64583333333334,\n            y: 17.934456447187927,\n            v: 44.838820301783265,\n          },\n          {\n            x: -85.70280349794238,\n            y: -68.94504458161866,\n            v: 779.8825445816186,\n          },\n          {\n            x: 74.71707818930042,\n            y: -3.6254715363511423,\n            v: 929.2781207133058,\n          },\n        ],\n      },\n    ],\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 24
+                },
+                {
+                    "name": "legend",
+                    "defaultValue": "{ display: false }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 23
+                },
+                {
+                    "name": "options",
+                    "defaultValue": "{\n    aspectRatio: 1,\n    legend: false,\n    tooltips: false,\n    elements: {\n      point: {\n        backgroundColor: colorize.bind(null, false),\n\n        borderColor: colorize.bind(null, true),\n\n        borderWidth(context) {\n          return Math.min(Math.max(1, context.datasetIndex + 1), 8);\n        },\n\n        hoverBackgroundColor: 'transparent',\n\n        hoverBorderWidth(context) {\n          const value = context.dataset.data[context.dataIndex];\n          return Math.round(8 * value.v / 1000);\n        },\n\n        radius(context) {\n          const value = context.dataset.data[context.dataIndex];\n          const size = context.chart.width;\n          const base = Math.abs(value.v) / 1000;\n          return size / 24 * base;\n        },\n      },\n    },\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 156
+                }
+            ],
+            "methodsClass": [],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component } from '@angular/core';\n\nfunction colorize(opaque, context) {\n  const value = context.dataset.data[context.dataIndex];\n  const x = value.x / 100;\n  const y = value.y / 100;\n  const r = x < 0 && y < 0 ? 250 : x < 0 ? 150 : y < 0 ? 50 : 0;\n  const g = x < 0 && y < 0 ? 0 : x < 0 ? 50 : y < 0 ? 150 : 250;\n  const b = x < 0 && y < 0 ? 0 : x > 0 && y > 0 ? 250 : 150;\n  const a = opaque ? 1 : 0.5 * value.v / 1000;\n\n  return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';\n}\n\n@Component({\n  selector: 'app-bubble-example',\n  template: `\n  <h3>Bubble Example</h3>\n  <ngx-chartjs [data]=\"data\" type=\"bubble\" [legend]=\"legend\" [options]=\"options\"></ngx-chartjs>\n  `,\n})\nexport class BubbleExampleComponent {\n  legend = { display: false };\n  data = {\n    datasets: [\n      {\n        data: [\n          {\n            x: -0.7298096707819184,\n            y: 14.870541838134443,\n            v: 54.95970507544581,\n          },\n          {\n            x: -52.115483539094654,\n            y: 76.71789266117969,\n            v: 23.799725651577504,\n          },\n          {\n            x: -6.857638888888886,\n            y: 19.930984224965727,\n            v: 323.6582647462277,\n          },\n          {\n            x: -10.78960905349794,\n            y: -51.323516803840874,\n            v: 371.20198902606313,\n          },\n          {\n            x: 40.25527263374485,\n            y: -32.878943758573385,\n            v: 583.0975651577503,\n          },\n          {\n            x: 0.44367283950614933,\n            y: -70.56862997256515,\n            v: 376.0116598079561,\n          },\n          {\n            x: -26.057741769547334,\n            y: -60.22590877914952,\n            v: 166.61093964334705,\n          },\n          {\n            x: 64.91769547325103,\n            y: -147.6841135116598,\n            v: 371.56207133058984,\n          },\n          {\n            x: -122.4633487654321,\n            y: 21.223422496570635,\n            v: 407.53172153635114,\n          },\n          { x: 15.965792181069958, y: 50.66336591220852, v: 691.1865569272977 },\n          { x: 84.37178497942386, y: 44.80238340192042, v: 639.193244170096 },\n          {\n            x: -63.078703703703695,\n            y: -142.19285836762688,\n            v: 668.2184499314129,\n          },\n          { x: -72.2190072016461, y: 93.8443072702332, v: 194.92884087791495 },\n          {\n            x: -88.88245884773663,\n            y: -142.91945301783264,\n            v: 635.9910836762689,\n          },\n          { x: -8.90239197530866, y: 1.6825274348422568, v: 408.0718449931413 },\n          {\n            x: 21.88786008230454,\n            y: -118.18308470507544,\n            v: 927.8377914951989,\n          },\n        ],\n      },\n      {\n        data: [\n          {\n            x: -142.34503600823047,\n            y: -148.34962277091907,\n            v: 611.9555898491084,\n          },\n          {\n            x: -147.4344135802469,\n            y: 15.349579903978054,\n            v: 877.0919067215364,\n          },\n          {\n            x: -139.2136059670782,\n            y: -22.918810013717433,\n            v: 139.9134087791495,\n          },\n          { x: -13.51594650205763, y: 91.01187414266118, v: 817.0867626886146 },\n          { x: 83.8252314814815, y: -38.69170096021948, v: 325.2786351165981 },\n          { x: 6.976594650205783, y: -57.86286865569272, v: 81.1556927297668 },\n          {\n            x: -139.8951903292181,\n            y: -112.3349622770919,\n            v: 501.3846021947874,\n          },\n          {\n            x: -2.6234567901234698,\n            y: -97.94131515775034,\n            v: 2.632030178326475,\n          },\n          { x: 22.95846193415636, y: 89.48473936899865, v: 1.5646433470507546 },\n          { x: 41.01723251028807, y: 54.109867969821664, v: 914.8491083676269 },\n          {\n            x: -94.28047839506172,\n            y: -99.89926268861454,\n            v: 159.15209190672152,\n          },\n          {\n            x: -28.768004115226333,\n            y: -18.375985939643357,\n            v: 151.14026063100135,\n          },\n          { x: 91.7213220164609, y: -97.15363511659808, v: 307.48028120713303 },\n          {\n            x: -128.64583333333334,\n            y: 17.934456447187927,\n            v: 44.838820301783265,\n          },\n          {\n            x: -85.70280349794238,\n            y: -68.94504458161866,\n            v: 779.8825445816186,\n          },\n          {\n            x: 74.71707818930042,\n            y: -3.6254715363511423,\n            v: 929.2781207133058,\n          },\n        ],\n      },\n    ],\n  };\n  options = {\n    aspectRatio: 1,\n    legend: false,\n    tooltips: false,\n    elements: {\n      point: {\n        backgroundColor: colorize.bind(null, false),\n\n        borderColor: colorize.bind(null, true),\n\n        borderWidth(context) {\n          return Math.min(Math.max(1, context.datasetIndex + 1), 8);\n        },\n\n        hoverBackgroundColor: 'transparent',\n\n        hoverBorderWidth(context) {\n          const value = context.dataset.data[context.dataIndex];\n          return Math.round(8 * value.v / 1000);\n        },\n\n        radius(context) {\n          const value = context.dataset.data[context.dataIndex];\n          const size = context.chart.width;\n          const base = Math.abs(value.v) / 1000;\n          return size / 24 * base;\n        },\n      },\n    },\n  };\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": ""
+        },
+        {
+            "name": "ChartjsComponent",
+            "id": "component-ChartjsComponent-cb6492b63476903f2f1e116c403d5169",
+            "file": "src/lib/chartjs.component.ts",
+            "changeDetection": "ChangeDetectionStrategy.OnPush",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "ngx-chartjs",
+            "styleUrls": [],
+            "styles": [],
+            "template": "<!-- wrapping div required for height, width to work -->\n<div>\n  <canvas\n    #ref\n    [attr.height]=\"height\"\n    [attr.width]=\"width\"\n    (click)=\"handleOnClick($event)\"\n  ></canvas>\n</div>\n",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [
+                {
+                    "name": "data",
+                    "line": 43,
+                    "type": "ChartData | any"
+                },
+                {
+                    "name": "datasetKeyProvider",
+                    "defaultValue": "d => d.label",
+                    "line": 54,
+                    "type": "function"
+                },
+                {
+                    "name": "height",
+                    "defaultValue": "150",
+                    "line": 44
+                },
+                {
+                    "name": "legend",
+                    "defaultValue": "{\n    display: true,\n    position: 'bottom',\n  }",
+                    "line": 47,
+                    "type": "ChartLegendOptions | any"
+                },
+                {
+                    "name": "options",
+                    "defaultValue": "{}",
+                    "line": 51,
+                    "type": "ChartOptions | any"
+                },
+                {
+                    "name": "plugins",
+                    "line": 52,
+                    "type": "any[]"
+                },
+                {
+                    "name": "redraw",
+                    "defaultValue": "false",
+                    "line": 53
+                },
+                {
+                    "name": "type",
+                    "defaultValue": "'doughnut'",
+                    "description": "<p>chart type </p>\n",
+                    "line": 42,
+                    "type": "ChartType | string"
+                },
+                {
+                    "name": "width",
+                    "defaultValue": "300",
+                    "line": 45
+                }
+            ],
+            "outputsClass": [
+                {
+                    "name": "chartClick",
+                    "defaultValue": "new EventEmitter<ChartClickEvent>()",
+                    "line": 40,
+                    "type": "EventEmitter"
+                }
+            ],
+            "propertiesClass": [
+                {
+                    "name": "chartInstance",
+                    "type": "any",
+                    "optional": false,
+                    "description": "",
+                    "line": 38
+                },
+                {
+                    "name": "ref",
+                    "type": "ElementRef<HTMLCanvasElement>",
+                    "optional": false,
+                    "description": "",
+                    "line": 39,
+                    "decorators": [
+                        {
+                            "name": "ViewChild",
+                            "stringifiedArguments": "'ref', {static: true}"
+                        }
+                    ]
+                }
+            ],
+            "methodsClass": [
+                {
+                    "name": "handleOnClick",
+                    "args": [
+                        {
+                            "name": "$event",
+                            "type": "Event"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 176,
+                    "jsdoctags": [
+                        {
+                            "name": "$event",
+                            "type": "Event",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "ngAfterViewInit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 58
+                },
+                {
+                    "name": "ngOnChanges",
+                    "args": [
+                        {
+                            "name": "changes",
+                            "type": "any"
+                        }
+                    ],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 61,
+                    "jsdoctags": [
+                        {
+                            "name": "changes",
+                            "type": "any",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "renderChart",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 143
+                },
+                {
+                    "name": "transformData",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "any",
+                    "typeParameters": [],
+                    "line": 165
+                },
+                {
+                    "name": "updateChart",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 73
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import {\n  AfterViewInit,\n  ChangeDetectionStrategy,\n  Component,\n  ElementRef,\n  EventEmitter,\n  Input,\n  NgZone,\n  OnChanges,\n  Output,\n  ViewChild,\n} from '@angular/core';\nimport {\n  ChartData,\n  ChartLegendOptions,\n  ChartOptions,\n  ChartType,\n} from 'chart.js';\n\ndeclare var require: any;\n\n@Component({\n  selector: 'ngx-chartjs',\n  template: `\n  <!-- wrapping div required for height, width to work -->\n  <div>\n    <canvas\n      #ref\n      [attr.height]=\"height\"\n      [attr.width]=\"width\"\n      (click)=\"handleOnClick($event)\"\n    ></canvas>\n  </div>\n  `,\n  changeDetection: ChangeDetectionStrategy.OnPush,\n})\nexport class ChartjsComponent implements AfterViewInit, OnChanges {\n  chartInstance: any;\n  @ViewChild('ref', { static: true }) ref: ElementRef<HTMLCanvasElement>;\n  @Output() chartClick = new EventEmitter<ChartClickEvent>();\n  /** chart type */\n  @Input() type: ChartType | string = 'doughnut';\n  @Input() data: ChartData | any;\n  @Input() height = 150;\n  @Input() width = 300;\n  @Input()\n  legend: ChartLegendOptions | any = {\n    display: true,\n    position: 'bottom',\n  };\n  @Input() options: ChartOptions | any = {};\n  @Input() plugins: any[];\n  @Input() redraw = false;\n  @Input() datasetKeyProvider: (x: any) => string = d => d.label;\n\n  constructor(private zone: NgZone) {}\n\n  ngAfterViewInit() {\n    this.renderChart();\n  }\n  ngOnChanges(changes: any) {\n    if (changes.firstChange) {\n      return;\n    }\n    if (this.chartInstance && this.redraw) {\n      this.chartInstance.destroy();\n      this.renderChart();\n      return;\n    }\n    this.updateChart();\n  }\n\n  updateChart() {\n    const data = this.transformData();\n\n    if (!this.chartInstance) {\n      return;\n    }\n\n    if (this.options) {\n      // in order to allow for universal rendering, we import chart.js runtime with `require` to prevent node errors\n      const Chart = require('chart.js');\n      this.chartInstance.options = (Chart as any).helpers.configMerge(\n        this.chartInstance.options,\n        this.options,\n      );\n    }\n\n    // Pipe datasets to chart instance datasets enabling\n    // seamless transitions\n    const currentDatasets: any[] =\n      (this.chartInstance.config.data &&\n        this.chartInstance.config.data.datasets) ||\n      [];\n    const nextDatasets = data.datasets || [];\n\n    const currentDatasetsIndexed = {};\n    currentDatasets.forEach((x) => {\n      currentDatasetsIndexed[this.datasetKeyProvider(x)] = x;\n    });\n\n    // We can safely replace the dataset array, as long as we retain the _meta property\n    // on each dataset.\n    this.chartInstance.config.data.datasets = nextDatasets.map(next => {\n      const current = currentDatasetsIndexed[this.datasetKeyProvider(next)];\n\n      if (current && current.type === next.type) {\n        // Reassign all properties from next\n        for (const nextProp of Object.keys(next)) {\n          // Data array can't be reassigned here.\n          if (nextProp !== 'data') {\n            current[nextProp] = next[nextProp];\n          }\n        }\n        // Remove properties from current if they was removed in next\n        for (const currentProp of Object.keys(current)) {\n          // Be careful with _meta property\n          if (!next.hasOwnProperty(currentProp) && currentProp !== '_meta') {\n            delete current[currentProp];\n          }\n        }\n        // The data array must be edited in place. As chart.js adds listeners to it.\n        current.data.splice(next.data.length);\n        next.data.forEach((point, pid) => {\n          current.data[pid] = next.data[pid];\n        });\n\n        return current;\n      }\n      return next;\n    });\n\n    const { datasets, ...rest } = data;\n\n    this.chartInstance.config.data = {\n      ...this.chartInstance.config.data,\n      ...rest,\n    };\n\n    this.chartInstance.update();\n  }\n\n  renderChart() {\n    const node = this.ref.nativeElement;\n    const data = this.transformData();\n\n    if (typeof this.legend !== 'undefined') {\n      const legendOptions = { ...this.legend, ...this.options.legend };\n      this.options.legend = legendOptions;\n    }\n\n    // in order to allow for universal rendering, we import Codemirror runtime with `require` to prevent node errors\n    const Chart = require('chart.js');\n\n    this.zone.runOutsideAngular(() => {\n      this.chartInstance = new Chart(node, {\n        type: this.type,\n        data,\n        options: this.options,\n        plugins: this.plugins,\n      });\n    });\n  }\n\n  transformData() {\n    if (!this.data) {\n      return;\n    }\n    if (typeof this.data === 'function') {\n      const node = this.ref;\n      return this.data(node);\n    }\n    return this.data;\n  }\n\n  handleOnClick($event: Event) {\n    this.chartClick.emit({\n      elements: this.chartInstance.getElementsAtEvent($event),\n      element: this.chartInstance.getElementAtEvent($event),\n      dataset: this.chartInstance.getDatasetAtEvent($event),\n      $event,\n    });\n  }\n}\n\nexport interface ChartClickEvent {\n  elements: any[];\n  element: any;\n  dataset: any[];\n  $event: Event;\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": "",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [
+                    {
+                        "name": "zone",
+                        "type": "NgZone"
+                    }
+                ],
+                "line": 54,
+                "jsdoctags": [
+                    {
+                        "name": "zone",
+                        "type": "NgZone",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            "implements": [
+                "AfterViewInit",
+                "OnChanges"
+            ]
+        },
+        {
+            "name": "CrazyDataLineExampleComponent",
+            "id": "component-CrazyDataLineExampleComponent-e064ee652a690cfc372d57af3fd4932f",
+            "file": "src/app/crazy-data-line-example/crazy-data-line-example.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-crazy-data-line-example",
+            "styleUrls": [],
+            "styles": [],
+            "template": "<h3>You can even make crazy graphs like this!</h3>\n<ngx-chartjs type=\"bar\" [data]=\"data\" [legend]=\"legend\"></ngx-chartjs>\n",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "data",
+                    "defaultValue": "{\n    labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],\n    datasets: [\n      {\n        label: 'My First dataset',\n        backgroundColor: pattern.generate(\n          random({ count: 7 }).map(n => n.toHexString()),\n        ),\n        borderColor: '#000',\n        borderWidth: 1,\n        hoverBackgroundColor: '#000',\n        hoverBorderColor: '#000',\n        data: [65, 59, 80, 81, 56, 55, 40],\n      },\n    ],\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 13
+                },
+                {
+                    "name": "legend",
+                    "defaultValue": "{\n    display: false,\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 29
+                }
+            ],
+            "methodsClass": [
+                {
+                    "name": "ngOnInit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 33
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, OnInit } from '@angular/core';\nimport { random } from '@ctrl/tinycolor';\nimport * as pattern from 'patternomaly';\n\n@Component({\n  selector: 'app-crazy-data-line-example',\n  template: `\n  <h3>You can even make crazy graphs like this!</h3>\n  <ngx-chartjs type=\"bar\" [data]=\"data\" [legend]=\"legend\"></ngx-chartjs>\n  `,\n})\nexport class CrazyDataLineExampleComponent implements OnInit {\n  data = {\n    labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],\n    datasets: [\n      {\n        label: 'My First dataset',\n        backgroundColor: pattern.generate(\n          random({ count: 7 }).map(n => n.toHexString()),\n        ),\n        borderColor: '#000',\n        borderWidth: 1,\n        hoverBackgroundColor: '#000',\n        hoverBorderColor: '#000',\n        data: [65, 59, 80, 81, 56, 55, 40],\n      },\n    ],\n  };\n  legend = {\n    display: false,\n  };\n\n  ngOnInit() {\n    setInterval(() => {\n      const oldDataSet = this.data.datasets[0];\n      const newData = [];\n\n      for (const _ of this.data.labels) {\n        newData.push(Math.floor(Math.random() * 100));\n      }\n\n      const newDataSet = {\n        ...oldDataSet,\n      };\n\n      newDataSet.data = newData;\n      newDataSet.backgroundColor = pattern.generate(\n        random({ count: 7 }).map(n => n.toHexString()),\n      );\n      newDataSet.borderColor = '#000';\n      newDataSet.hoverBackgroundColor = '#000';\n      newDataSet.hoverBorderColor = '#000';\n\n      this.data = {\n        ...this.data,\n        datasets: [newDataSet],\n      };\n    }, 6200);\n  }\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": "",
+            "implements": [
+                "OnInit"
+            ]
+        },
+        {
+            "name": "DoughnutExampleComponent",
+            "id": "component-DoughnutExampleComponent-4e0c3453cb39e92bd063d931fa19f641",
+            "file": "src/app/doughnut-example/doughnut-example.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-doughnut-example",
+            "styleUrls": [],
+            "styles": [],
+            "template": "<h3>Doughnut Example</h3>\n<ngx-chartjs [data]=\"data\"></ngx-chartjs>\n",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "data",
+                    "defaultValue": "{\n    labels: ['Red', 'Green', 'Yellow'],\n    datasets: [\n      {\n        data: [300, 50, 100],\n        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n        hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n      },\n    ],\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 11
+                }
+            ],
+            "methodsClass": [],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component } from '@angular/core';\n\n@Component({\n  selector: 'app-doughnut-example',\n  template: `\n  <h3>Doughnut Example</h3>\n  <ngx-chartjs [data]=\"data\"></ngx-chartjs>\n  `,\n})\nexport class DoughnutExampleComponent {\n  data = {\n    labels: ['Red', 'Green', 'Yellow'],\n    datasets: [\n      {\n        data: [300, 50, 100],\n        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n        hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n      },\n    ],\n  };\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": ""
+        },
+        {
+            "name": "DynamicDoughnutExampleComponent",
+            "id": "component-DynamicDoughnutExampleComponent-a42fe9e839af8b376c367e6f4e27a1ec",
+            "file": "src/app/dynamic-doughnut-example/dynamic-doughnut-example.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-dynamic-doughnut-example",
+            "styleUrls": [],
+            "styles": [],
+            "template": "<h3>Dynamicly refreshed Doughnut Example</h3>\n<ngx-chartjs [data]=\"data\"></ngx-chartjs>\n",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "data",
+                    "defaultValue": "this.getState()",
+                    "type": "",
+                    "optional": false,
+                    "description": "",
+                    "line": 15
+                }
+            ],
+            "methodsClass": [
+                {
+                    "name": "getState",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "{ labels: {}; datasets: {}; }",
+                    "typeParameters": [],
+                    "line": 23
+                },
+                {
+                    "name": "ngOnInit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 17
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, OnInit } from '@angular/core';\n\nfunction getRandomInt(min, max) {\n  return Math.floor(Math.random() * (max - min + 1)) + min;\n}\n\n@Component({\n  selector: 'app-dynamic-doughnut-example',\n  template: `\n  <h3>Dynamicly refreshed Doughnut Example</h3>\n  <ngx-chartjs [data]=\"data\"></ngx-chartjs>\n  `,\n})\nexport class DynamicDoughnutExampleComponent implements OnInit {\n  data = this.getState();\n\n  ngOnInit() {\n    setInterval(() => {\n      this.data = this.getState();\n    }, 4200);\n  }\n\n  getState() {\n    return {\n      labels: ['Red', 'Green', 'Yellow'],\n      datasets: [\n        {\n          data: [\n            getRandomInt(50, 200),\n            getRandomInt(100, 150),\n            getRandomInt(150, 250),\n          ],\n          backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n          hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n        },\n      ],\n    };\n  }\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": "",
+            "implements": [
+                "OnInit"
+            ]
+        },
+        {
+            "name": "HorizontalBarExampleComponent",
+            "id": "component-HorizontalBarExampleComponent-69809db8dbee6c93a86672ffb41e27c5",
+            "file": "src/app/horizontal-bar-example/horizontal-bar-example.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-horizontal-bar-example",
+            "styleUrls": [],
+            "styles": [],
+            "template": "<h3>Horizontal Bar Example</h3>\n<ngx-chartjs [data]=\"data\" [options]=\"options\" type=\"horizontalBar\"></ngx-chartjs>\n",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "data",
+                    "defaultValue": "{\n    labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],\n    datasets: [\n      {\n        label: 'My First Dataset',\n        data: [65, 59, 80, 81, 56, 55, 40],\n        fill: false,\n        backgroundColor: [\n          'rgba(255, 99, 132, 0.2)',\n          'rgba(255, 159, 64, 0.2)',\n          'rgba(255, 205, 86, 0.2)',\n          'rgba(75, 192, 192, 0.2)',\n          'rgba(54, 162, 235, 0.2)',\n          'rgba(153, 102, 255, 0.2)',\n          'rgba(201, 203, 207, 0.2)',\n        ],\n        borderColor: [\n          'rgb(255, 99, 132)',\n          'rgb(255, 159, 64)',\n          'rgb(255, 205, 86)',\n          'rgb(75, 192, 192)',\n          'rgb(54, 162, 235)',\n          'rgb(153, 102, 255)',\n          'rgb(201, 203, 207)',\n        ],\n        borderWidth: 1,\n      },\n    ],\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 11
+                },
+                {
+                    "name": "options",
+                    "defaultValue": "{\n    legend: {\n      display: false,\n    },\n    scales: { xAxes: [{ ticks: { beginAtZero: true } }] },\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 40
+                }
+            ],
+            "methodsClass": [
+                {
+                    "name": "ngOnInit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 49
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, OnInit } from '@angular/core';\n\n@Component({\n  selector: 'app-horizontal-bar-example',\n  template: `\n  <h3>Horizontal Bar Example</h3>\n  <ngx-chartjs [data]=\"data\" [options]=\"options\" type=\"horizontalBar\"></ngx-chartjs>\n  `,\n})\nexport class HorizontalBarExampleComponent implements OnInit {\n  data = {\n    labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],\n    datasets: [\n      {\n        label: 'My First Dataset',\n        data: [65, 59, 80, 81, 56, 55, 40],\n        fill: false,\n        backgroundColor: [\n          'rgba(255, 99, 132, 0.2)',\n          'rgba(255, 159, 64, 0.2)',\n          'rgba(255, 205, 86, 0.2)',\n          'rgba(75, 192, 192, 0.2)',\n          'rgba(54, 162, 235, 0.2)',\n          'rgba(153, 102, 255, 0.2)',\n          'rgba(201, 203, 207, 0.2)',\n        ],\n        borderColor: [\n          'rgb(255, 99, 132)',\n          'rgb(255, 159, 64)',\n          'rgb(255, 205, 86)',\n          'rgb(75, 192, 192)',\n          'rgb(54, 162, 235)',\n          'rgb(153, 102, 255)',\n          'rgb(201, 203, 207)',\n        ],\n        borderWidth: 1,\n      },\n    ],\n  };\n  options = {\n    legend: {\n      display: false,\n    },\n    scales: { xAxes: [{ ticks: { beginAtZero: true } }] },\n  };\n\n  constructor() {}\n\n  ngOnInit() {}\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": "",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [],
+                "line": 45
+            },
+            "implements": [
+                "OnInit"
+            ]
+        },
+        {
+            "name": "LegendHandlersExampleComponent",
+            "id": "component-LegendHandlersExampleComponent-69a39191643ec45ea6f53f45f555f047",
+            "file": "src/app/legend-handlers-example/legend-handlers-example.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-legend-handlers-example",
+            "styleUrls": [],
+            "styles": [],
+            "template": "<h3>Legend Handlers Example</h3>\n<p>Hover over label and click</p>\n<ngx-chartjs [data]=\"data\" [legend]=\"legend\"></ngx-chartjs>\n",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "data",
+                    "defaultValue": "{\n    labels: ['Red', 'Green', 'Yellow'],\n    datasets: [\n      {\n        data: [300, 50, 100],\n        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n        hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n      },\n    ],\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 12
+                },
+                {
+                    "name": "legend",
+                    "defaultValue": "{\n    onClick: (e, item) =>\n      alert(`Item with text ${item.text} and index ${item.index} clicked`),\n    onHover: (e, item) =>\n      alert(`Item with text ${item.text} and index ${item.index} hovered`),\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 22
+                }
+            ],
+            "methodsClass": [],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component } from '@angular/core';\n\n@Component({\n  selector: 'app-legend-handlers-example',\n  template: `\n  <h3>Legend Handlers Example</h3>\n  <p>Hover over label and click</p>\n  <ngx-chartjs [data]=\"data\" [legend]=\"legend\"></ngx-chartjs>\n  `,\n})\nexport class LegendHandlersExampleComponent {\n  data = {\n    labels: ['Red', 'Green', 'Yellow'],\n    datasets: [\n      {\n        data: [300, 50, 100],\n        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n        hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n      },\n    ],\n  };\n  legend = {\n    onClick: (e, item) =>\n      alert(`Item with text ${item.text} and index ${item.index} clicked`),\n    onHover: (e, item) =>\n      alert(`Item with text ${item.text} and index ${item.index} hovered`),\n  };\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": ""
+        },
+        {
+            "name": "LegendOptionsExampleComponent",
+            "id": "component-LegendOptionsExampleComponent-8748527299bef11c8d58d028fb311c73",
+            "file": "src/app/legend-options-example/legend-options-example.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-legend-options-example",
+            "styleUrls": [],
+            "styles": [],
+            "template": "<h3>Legend Options Example</h3>\n<textarea\n  cols=\"40\"\n  rows=\"15\"\n  [(ngModel)]=\"legendValue\">\n</textarea>\n<div>\n  <button (click)=\"applyLegendSettings()\">Apply legend settings</button>\n</div>\n<ngx-chartjs [data]=\"data\" type=\"polarArea\" [legend]=\"legend\" [redraw]=\"true\">\n</ngx-chartjs>\n",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "data",
+                    "defaultValue": "{\n    labels: ['Red', 'Green', 'Yellow'],\n    datasets: [\n      {\n        data: [300, 50, 100],\n        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n        hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n      },\n    ],\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 20
+                },
+                {
+                    "name": "legend",
+                    "defaultValue": "{}",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 30
+                },
+                {
+                    "name": "legendValue",
+                    "defaultValue": "JSON.stringify(\n    {\n      display: true,\n      position: 'top',\n      fullWidth: true,\n      reverse: false,\n      labels: {\n        fontColor: 'rgb(255, 99, 132)',\n      },\n    },\n    null,\n    2,\n  )",
+                    "type": "",
+                    "optional": false,
+                    "description": "",
+                    "line": 31
+                }
+            ],
+            "methodsClass": [
+                {
+                    "name": "applyLegendSettings",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 45
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component } from '@angular/core';\n\n@Component({\n  selector: 'app-legend-options-example',\n  template: `\n  <h3>Legend Options Example</h3>\n  <textarea\n    cols=\"40\"\n    rows=\"15\"\n    [(ngModel)]=\"legendValue\">\n  </textarea>\n  <div>\n    <button (click)=\"applyLegendSettings()\">Apply legend settings</button>\n  </div>\n  <ngx-chartjs [data]=\"data\" type=\"polarArea\" [legend]=\"legend\" [redraw]=\"true\">\n  </ngx-chartjs>\n  `,\n})\nexport class LegendOptionsExampleComponent {\n  data = {\n    labels: ['Red', 'Green', 'Yellow'],\n    datasets: [\n      {\n        data: [300, 50, 100],\n        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n        hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n      },\n    ],\n  };\n  legend = {};\n  legendValue = JSON.stringify(\n    {\n      display: true,\n      position: 'top',\n      fullWidth: true,\n      reverse: false,\n      labels: {\n        fontColor: 'rgb(255, 99, 132)',\n      },\n    },\n    null,\n    2,\n  );\n\n  applyLegendSettings() {\n    try {\n      const opts = JSON.parse(this.legendValue);\n      this.legend = opts;\n    } catch (e) {\n      alert(e.message);\n      throw Error(e);\n    }\n  }\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": ""
+        },
+        {
+            "name": "LineExampleComponent",
+            "id": "component-LineExampleComponent-682c1d3b8327f58e73a3d4a74b40ab82",
+            "file": "src/app/line-example/line-example.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-line-example",
+            "styleUrls": [],
+            "styles": [],
+            "template": "<h3>Line Example</h3>\n<ngx-chartjs [data]=\"data\" type=\"line\"></ngx-chartjs>\n",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "data",
+                    "defaultValue": "{\n    labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],\n    datasets: [\n      {\n        label: 'My First Dataset',\n        data: [65, 59, 80, 81, 56, 55, 40],\n        fill: false,\n        borderColor: 'rgb(75, 192, 192)',\n        lineTension: 0.1,\n      },\n    ],\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 11
+                }
+            ],
+            "methodsClass": [],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component } from '@angular/core';\n\n@Component({\n  selector: 'app-line-example',\n  template: `\n    <h3>Line Example</h3>\n    <ngx-chartjs [data]=\"data\" type=\"line\"></ngx-chartjs>\n  `,\n})\nexport class LineExampleComponent {\n  data = {\n    labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],\n    datasets: [\n      {\n        label: 'My First Dataset',\n        data: [65, 59, 80, 81, 56, 55, 40],\n        fill: false,\n        borderColor: 'rgb(75, 192, 192)',\n        lineTension: 0.1,\n      },\n    ],\n  };\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": ""
+        },
+        {
+            "name": "MixedDataExampleComponent",
+            "id": "component-MixedDataExampleComponent-878dbfba42b1a1298d75b38b65612d3a",
+            "file": "src/app/mixed-data-example/mixed-data-example.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-mixed-data-example",
+            "styleUrls": [],
+            "styles": [],
+            "template": "<h3>Mixed data Example</h3>\n<ngx-chartjs [data]=\"data\" type=\"bar\" [options]=\"options\" [plugins]=\"plugins\">\n</ngx-chartjs>\n",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "data",
+                    "defaultValue": "{\n    labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],\n    datasets: [\n      {\n        type: 'line',\n        label: 'Dataset 1',\n        borderColor: 'rgb(54, 162, 235)',\n        borderWidth: 2,\n        fill: false,\n        data: [\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n        ],\n      },\n      {\n        type: 'bar',\n        label: 'Dataset 2',\n        backgroundColor: 'rgb(255, 99, 132)',\n        data: [\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n        ],\n        borderColor: 'white',\n        borderWidth: 2,\n      },\n      {\n        type: 'bar',\n        label: 'Dataset 3',\n        backgroundColor: 'rgb(75, 192, 192)',\n        data: [\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n        ],\n      },\n    ],\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 26
+                },
+                {
+                    "name": "options",
+                    "defaultValue": "{\n    responsive: true,\n    title: {\n      display: true,\n      text: 'Chart.js Combo Bar Line Chart',\n    },\n    tooltips: {\n      mode: 'index',\n      intersect: true,\n    },\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 77
+                },
+                {
+                    "name": "plugins",
+                    "defaultValue": "[\n    {\n      afterDraw: (chartInstance, easing) => {\n        const ctx = chartInstance.chart.ctx;\n        const gradient = ctx.createLinearGradient(0, 0, 420, 0);\n        gradient.addColorStop('0', 'magenta');\n        gradient.addColorStop('0.5', 'blue');\n        gradient.addColorStop('1.0', 'red');\n        ctx.fillStyle = gradient;\n        ctx.fillText('This text drawn by a plugin', 200, 100);\n      },\n    },\n  ]",
+                    "type": "[]",
+                    "optional": false,
+                    "description": "",
+                    "line": 88
+                }
+            ],
+            "methodsClass": [],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component } from '@angular/core';\n\n// tslint:disable-next-line: variable-name\nlet _seed = Math.random() * 100;\n\nfunction rand(min, max) {\n  const seed = _seed;\n  min = min === undefined ? 0 : min;\n  max = max === undefined ? 1 : max;\n  _seed = (seed * 9301 + 49297) % 233280;\n  return min + _seed / 233280 * (max - min);\n}\nfunction randomScalingFactor() {\n  return Math.round(rand(-100, 100));\n}\n\n@Component({\n  selector: 'app-mixed-data-example',\n  template: `\n  <h3>Mixed data Example</h3>\n  <ngx-chartjs [data]=\"data\" type=\"bar\" [options]=\"options\" [plugins]=\"plugins\">\n  </ngx-chartjs>\n  `,\n})\nexport class MixedDataExampleComponent {\n  data = {\n    labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],\n    datasets: [\n      {\n        type: 'line',\n        label: 'Dataset 1',\n        borderColor: 'rgb(54, 162, 235)',\n        borderWidth: 2,\n        fill: false,\n        data: [\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n        ],\n      },\n      {\n        type: 'bar',\n        label: 'Dataset 2',\n        backgroundColor: 'rgb(255, 99, 132)',\n        data: [\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n        ],\n        borderColor: 'white',\n        borderWidth: 2,\n      },\n      {\n        type: 'bar',\n        label: 'Dataset 3',\n        backgroundColor: 'rgb(75, 192, 192)',\n        data: [\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n          randomScalingFactor(),\n        ],\n      },\n    ],\n  };\n  options = {\n    responsive: true,\n    title: {\n      display: true,\n      text: 'Chart.js Combo Bar Line Chart',\n    },\n    tooltips: {\n      mode: 'index',\n      intersect: true,\n    },\n  };\n  plugins = [\n    {\n      afterDraw: (chartInstance, easing) => {\n        const ctx = chartInstance.chart.ctx;\n        const gradient = ctx.createLinearGradient(0, 0, 420, 0);\n        gradient.addColorStop('0', 'magenta');\n        gradient.addColorStop('0.5', 'blue');\n        gradient.addColorStop('1.0', 'red');\n        ctx.fillStyle = gradient;\n        ctx.fillText('This text drawn by a plugin', 200, 100);\n      },\n    },\n  ];\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": ""
+        },
+        {
+            "name": "PieExampleComponent",
+            "id": "component-PieExampleComponent-b9f5f4e6b928fa3421ba71d5a9628fb2",
+            "file": "src/app/pie-example/pie-example.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-pie-example",
+            "styleUrls": [],
+            "styles": [],
+            "template": "<h3>Pie Example</h3>\n<ngx-chartjs [data]=\"data\" type=\"pie\"></ngx-chartjs>\n",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "data",
+                    "defaultValue": "{\n    labels: ['Red', 'Green', 'Yellow'],\n    datasets: [\n      {\n        data: [300, 50, 100],\n        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n        hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n      },\n    ],\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 11
+                }
+            ],
+            "methodsClass": [
+                {
+                    "name": "ngOnInit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 24
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, OnInit } from '@angular/core';\n\n@Component({\n  selector: 'app-pie-example',\n  template: `\n  <h3>Pie Example</h3>\n  <ngx-chartjs [data]=\"data\" type=\"pie\"></ngx-chartjs>\n  `,\n})\nexport class PieExampleComponent implements OnInit {\n  data = {\n    labels: ['Red', 'Green', 'Yellow'],\n    datasets: [\n      {\n        data: [300, 50, 100],\n        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n        hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],\n      },\n    ],\n  };\n\n  constructor() {}\n\n  ngOnInit() {}\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": "",
+            "constructorObj": {
+                "name": "constructor",
+                "description": "",
+                "args": [],
+                "line": 20
+            },
+            "implements": [
+                "OnInit"
+            ]
+        },
+        {
+            "name": "PolarExampleComponent",
+            "id": "component-PolarExampleComponent-52a745f8e167cdbcdd42d5188b15955c",
+            "file": "src/app/polar-example/polar-example.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-polar-example",
+            "styleUrls": [],
+            "styles": [],
+            "template": "<h3>Polar Example</h3>\n<ngx-chartjs [data]=\"data\" [options]=\"options\" type=\"polarArea\"></ngx-chartjs>\n",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "data",
+                    "defaultValue": "{\n    labels: ['Red', 'Green', 'Yellow', 'Grey', 'Blue'],\n    datasets: [\n      {\n        label: 'My First Dataset',\n        data: [11, 16, 7, 3, 14],\n        backgroundColor: [\n          'rgb(255, 99, 132)',\n          'rgb(75, 192, 192)',\n          'rgb(255, 205, 86)',\n          'rgb(201, 203, 207)',\n          'rgb(54, 162, 235)',\n        ],\n      },\n    ],\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 11
+                },
+                {
+                    "name": "options",
+                    "defaultValue": "{\n    responsive: true,\n    legend: {\n      position: 'right',\n    },\n    title: {\n      display: true,\n      text: 'Chart.js Polar Area Chart',\n    },\n    scale: {\n      ticks: {\n        beginAtZero: true,\n      },\n      reverse: false,\n    },\n    animation: {\n      animateRotate: false,\n      animateScale: true,\n    },\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 27
+                }
+            ],
+            "methodsClass": [],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component } from '@angular/core';\n\n@Component({\n  selector: 'app-polar-example',\n  template: `\n  <h3>Polar Example</h3>\n  <ngx-chartjs [data]=\"data\" [options]=\"options\" type=\"polarArea\"></ngx-chartjs>\n  `,\n})\nexport class PolarExampleComponent {\n  data = {\n    labels: ['Red', 'Green', 'Yellow', 'Grey', 'Blue'],\n    datasets: [\n      {\n        label: 'My First Dataset',\n        data: [11, 16, 7, 3, 14],\n        backgroundColor: [\n          'rgb(255, 99, 132)',\n          'rgb(75, 192, 192)',\n          'rgb(255, 205, 86)',\n          'rgb(201, 203, 207)',\n          'rgb(54, 162, 235)',\n        ],\n      },\n    ],\n  };\n  options = {\n    responsive: true,\n    legend: {\n      position: 'right',\n    },\n    title: {\n      display: true,\n      text: 'Chart.js Polar Area Chart',\n    },\n    scale: {\n      ticks: {\n        beginAtZero: true,\n      },\n      reverse: false,\n    },\n    animation: {\n      animateRotate: false,\n      animateScale: true,\n    },\n  };\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": ""
+        },
+        {
+            "name": "RadarExampleComponent",
+            "id": "component-RadarExampleComponent-998a7ca0b319155197945f3c79b43990",
+            "file": "src/app/radar-example/radar-example.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-radar-example",
+            "styleUrls": [],
+            "styles": [],
+            "template": "<h3>Radar Example</h3>\n<ngx-chartjs [data]=\"data\" type=\"radar\"></ngx-chartjs>\n",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "data",
+                    "defaultValue": "{\n    labels: [\n      'Eating',\n      'Drinking',\n      'Sleeping',\n      'Designing',\n      'Coding',\n      'Cycling',\n      'Running',\n    ],\n    datasets: [\n      {\n        label: 'My First dataset',\n        backgroundColor: 'rgba(179,181,198,0.2)',\n        borderColor: 'rgba(179,181,198,1)',\n        pointBackgroundColor: 'rgba(179,181,198,1)',\n        pointBorderColor: '#fff',\n        pointHoverBackgroundColor: '#fff',\n        pointHoverBorderColor: 'rgba(179,181,198,1)',\n        data: [65, 59, 90, 81, 56, 55, 40],\n      },\n      {\n        label: 'My Second dataset',\n        backgroundColor: 'rgba(255,99,132,0.2)',\n        borderColor: 'rgba(255,99,132,1)',\n        pointBackgroundColor: 'rgba(255,99,132,1)',\n        pointBorderColor: '#fff',\n        pointHoverBackgroundColor: '#fff',\n        pointHoverBorderColor: 'rgba(255,99,132,1)',\n        data: [28, 48, 40, 19, 96, 27, 100],\n      },\n    ],\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 11
+                }
+            ],
+            "methodsClass": [],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component } from '@angular/core';\n\n@Component({\n  selector: 'app-radar-example',\n  template: `\n  <h3>Radar Example</h3>\n  <ngx-chartjs [data]=\"data\" type=\"radar\"></ngx-chartjs>\n  `,\n})\nexport class RadarExampleComponent {\n  data = {\n    labels: [\n      'Eating',\n      'Drinking',\n      'Sleeping',\n      'Designing',\n      'Coding',\n      'Cycling',\n      'Running',\n    ],\n    datasets: [\n      {\n        label: 'My First dataset',\n        backgroundColor: 'rgba(179,181,198,0.2)',\n        borderColor: 'rgba(179,181,198,1)',\n        pointBackgroundColor: 'rgba(179,181,198,1)',\n        pointBorderColor: '#fff',\n        pointHoverBackgroundColor: '#fff',\n        pointHoverBorderColor: 'rgba(179,181,198,1)',\n        data: [65, 59, 90, 81, 56, 55, 40],\n      },\n      {\n        label: 'My Second dataset',\n        backgroundColor: 'rgba(255,99,132,0.2)',\n        borderColor: 'rgba(255,99,132,1)',\n        pointBackgroundColor: 'rgba(255,99,132,1)',\n        pointBorderColor: '#fff',\n        pointHoverBackgroundColor: '#fff',\n        pointHoverBorderColor: 'rgba(255,99,132,1)',\n        data: [28, 48, 40, 19, 96, 27, 100],\n      },\n    ],\n  };\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": ""
+        },
+        {
+            "name": "RandomizedDataLineExampleComponent",
+            "id": "component-RandomizedDataLineExampleComponent-fdbff7ef139598adbf023c9da6c7d022",
+            "file": "src/app/randomized-data-line-example/randomized-data-line-example.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-randomized-data-line-example",
+            "styleUrls": [],
+            "styles": [],
+            "template": "<h3>Random Animated Line Example</h3>\n<ngx-chartjs [data]=\"data\" type=\"line\"></ngx-chartjs>\n",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "data",
+                    "defaultValue": "{\n    labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],\n    datasets: [\n      {\n        label: 'My First dataset',\n        fill: false,\n        lineTension: 0.1,\n        backgroundColor: 'rgba(75,192,192,0.4)',\n        borderColor: 'rgba(75,192,192,1)',\n        borderCapStyle: 'butt',\n        borderDash: [],\n        borderDashOffset: 0.0,\n        borderJoinStyle: 'miter',\n        pointBorderColor: 'rgba(75,192,192,1)',\n        pointBackgroundColor: '#fff',\n        pointBorderWidth: 1,\n        pointHoverRadius: 5,\n        pointHoverBackgroundColor: 'rgba(75,192,192,1)',\n        pointHoverBorderColor: 'rgba(220,220,220,1)',\n        pointHoverBorderWidth: 2,\n        pointRadius: 1,\n        pointHitRadius: 10,\n        data: [65, 59, 80, 81, 56, 55, 40],\n      },\n    ],\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 11
+                }
+            ],
+            "methodsClass": [
+                {
+                    "name": "ngOnInit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 38
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, OnInit } from '@angular/core';\n\n@Component({\n  selector: 'app-randomized-data-line-example',\n  template: `\n  <h3>Random Animated Line Example</h3>\n  <ngx-chartjs [data]=\"data\" type=\"line\"></ngx-chartjs>\n  `,\n})\nexport class RandomizedDataLineExampleComponent implements OnInit {\n  data = {\n    labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],\n    datasets: [\n      {\n        label: 'My First dataset',\n        fill: false,\n        lineTension: 0.1,\n        backgroundColor: 'rgba(75,192,192,0.4)',\n        borderColor: 'rgba(75,192,192,1)',\n        borderCapStyle: 'butt',\n        borderDash: [],\n        borderDashOffset: 0.0,\n        borderJoinStyle: 'miter',\n        pointBorderColor: 'rgba(75,192,192,1)',\n        pointBackgroundColor: '#fff',\n        pointBorderWidth: 1,\n        pointHoverRadius: 5,\n        pointHoverBackgroundColor: 'rgba(75,192,192,1)',\n        pointHoverBorderColor: 'rgba(220,220,220,1)',\n        pointHoverBorderWidth: 2,\n        pointRadius: 1,\n        pointHitRadius: 10,\n        data: [65, 59, 80, 81, 56, 55, 40],\n      },\n    ],\n  };\n\n  ngOnInit() {\n    setInterval(() => {\n      const oldDataSet = this.data.datasets[0];\n      const newData = [];\n\n      for (const _ of this.data.labels) {\n        newData.push(Math.floor(Math.random() * 100));\n      }\n\n      const newDataSet = {\n        ...oldDataSet,\n      };\n\n      newDataSet.data = newData;\n\n      const newState = {\n        ...this.data,\n        datasets: [newDataSet],\n      };\n\n      this.data = newState;\n    }, 5000);\n  }\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": "",
+            "implements": [
+                "OnInit"
+            ]
+        },
+        {
+            "name": "ScatterExampleComponent",
+            "id": "component-ScatterExampleComponent-c02d80ac02e8b30fd02d679147fa290c",
+            "file": "src/app/scatter-example/scatter-example.component.ts",
+            "encapsulation": [],
+            "entryComponents": [],
+            "inputs": [],
+            "outputs": [],
+            "providers": [],
+            "selector": "app-scatter-example",
+            "styleUrls": [],
+            "styles": [],
+            "template": "<h3>Scatter Example</h3>\n<ngx-chartjs [data]=\"data\" type=\"scatter\"></ngx-chartjs>\n",
+            "templateUrl": [],
+            "viewProviders": [],
+            "inputsClass": [],
+            "outputsClass": [],
+            "propertiesClass": [
+                {
+                    "name": "data",
+                    "defaultValue": "{\n    labels: ['Scatter'],\n    datasets: [\n      {\n        label: 'My First dataset',\n        fill: false,\n        backgroundColor: 'rgba(75,192,192,0.4)',\n        pointBorderColor: 'rgba(75,192,192,1)',\n        pointBackgroundColor: '#fff',\n        pointBorderWidth: 1,\n        pointHoverRadius: 5,\n        pointHoverBackgroundColor: 'rgba(75,192,192,1)',\n        pointHoverBorderColor: 'rgba(220,220,220,1)',\n        pointHoverBorderWidth: 2,\n        pointRadius: 1,\n        pointHitRadius: 10,\n        data: [\n          { x: 65, y: 75 },\n          { x: 59, y: 49 },\n          { x: 80, y: 90 },\n          { x: 81, y: 29 },\n          { x: 56, y: 36 },\n          { x: 55, y: 25 },\n          { x: 40, y: 18 },\n        ],\n      },\n    ],\n  }",
+                    "type": "object",
+                    "optional": false,
+                    "description": "",
+                    "line": 11
+                }
+            ],
+            "methodsClass": [
+                {
+                    "name": "ngOnInit",
+                    "args": [],
+                    "optional": false,
+                    "returnType": "void",
+                    "typeParameters": [],
+                    "line": 40
+                }
+            ],
+            "hostBindings": [],
+            "hostListeners": [],
+            "description": "",
+            "rawdescription": "",
+            "type": "component",
+            "sourceCode": "import { Component, OnInit } from '@angular/core';\n\n@Component({\n  selector: 'app-scatter-example',\n  template: `\n  <h3>Scatter Example</h3>\n  <ngx-chartjs [data]=\"data\" type=\"scatter\"></ngx-chartjs>\n  `,\n})\nexport class ScatterExampleComponent implements OnInit {\n  data = {\n    labels: ['Scatter'],\n    datasets: [\n      {\n        label: 'My First dataset',\n        fill: false,\n        backgroundColor: 'rgba(75,192,192,0.4)',\n        pointBorderColor: 'rgba(75,192,192,1)',\n        pointBackgroundColor: '#fff',\n        pointBorderWidth: 1,\n        pointHoverRadius: 5,\n        pointHoverBackgroundColor: 'rgba(75,192,192,1)',\n        pointHoverBorderColor: 'rgba(220,220,220,1)',\n        pointHoverBorderWidth: 2,\n        pointRadius: 1,\n        pointHitRadius: 10,\n        data: [\n          { x: 65, y: 75 },\n          { x: 59, y: 49 },\n          { x: 80, y: 90 },\n          { x: 81, y: 29 },\n          { x: 56, y: 36 },\n          { x: 55, y: 25 },\n          { x: 40, y: 18 },\n        ],\n      },\n    ],\n  };\n\n  ngOnInit() {}\n}\n",
+            "assetsDirs": [],
+            "styleUrlsData": "",
+            "stylesData": "",
+            "implements": [
+                "OnInit"
+            ]
+        }
+    ],
+    "modules": [
+        {
+            "name": "AppModule",
+            "children": [
+                {
+                    "type": "providers",
+                    "elements": []
+                },
+                {
+                    "type": "declarations",
+                    "elements": [
+                        {
+                            "name": "AppComponent"
+                        },
+                        {
+                            "name": "BarExampleComponent"
+                        },
+                        {
+                            "name": "BubbleExampleComponent"
+                        },
+                        {
+                            "name": "CrazyDataLineExampleComponent"
+                        },
+                        {
+                            "name": "DoughnutExampleComponent"
+                        },
+                        {
+                            "name": "DynamicDoughnutExampleComponent"
+                        },
+                        {
+                            "name": "HorizontalBarExampleComponent"
+                        },
+                        {
+                            "name": "LegendHandlersExampleComponent"
+                        },
+                        {
+                            "name": "LegendOptionsExampleComponent"
+                        },
+                        {
+                            "name": "LineExampleComponent"
+                        },
+                        {
+                            "name": "MixedDataExampleComponent"
+                        },
+                        {
+                            "name": "PieExampleComponent"
+                        },
+                        {
+                            "name": "PolarExampleComponent"
+                        },
+                        {
+                            "name": "RadarExampleComponent"
+                        },
+                        {
+                            "name": "RandomizedDataLineExampleComponent"
+                        },
+                        {
+                            "name": "ScatterExampleComponent"
+                        }
+                    ]
+                },
+                {
+                    "type": "imports",
+                    "elements": [
+                        {
+                            "name": "ChartjsModule"
+                        }
+                    ]
+                },
+                {
+                    "type": "exports",
+                    "elements": []
+                },
+                {
+                    "type": "bootstrap",
+                    "elements": [
+                        {
+                            "name": "AppComponent"
+                        }
+                    ]
+                },
+                {
+                    "type": "classes",
+                    "elements": []
+                }
+            ]
+        },
+        {
+            "name": "ChartjsModule",
+            "children": [
+                {
+                    "type": "providers",
+                    "elements": []
+                },
+                {
+                    "type": "declarations",
+                    "elements": [
+                        {
+                            "name": "ChartjsComponent"
+                        }
+                    ]
+                },
+                {
+                    "type": "imports",
+                    "elements": []
+                },
+                {
+                    "type": "exports",
+                    "elements": [
+                        {
+                            "name": "ChartjsComponent"
+                        }
+                    ]
+                },
+                {
+                    "type": "bootstrap",
+                    "elements": []
+                },
+                {
+                    "type": "classes",
+                    "elements": []
+                }
+            ]
+        }
+    ],
+    "miscellaneous": {
+        "variables": [
+            {
+                "name": "_seed",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/app/mixed-data-example/mixed-data-example.component.ts",
+                "type": "",
+                "defaultValue": "Math.random() * 100"
+            },
+            {
+                "name": "context",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/test.ts",
+                "type": "",
+                "defaultValue": "require.context('./', true, /\\.spec\\.ts$/)"
+            },
+            {
+                "name": "environment",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/environments/environment.prod.ts",
+                "type": "object",
+                "defaultValue": "{\n  production: true\n}"
+            },
+            {
+                "name": "environment",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/environments/environment.ts",
+                "type": "object",
+                "defaultValue": "{\n  production: false\n}"
+            },
+            {
+                "name": "require",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/test.ts",
+                "type": "any"
+            },
+            {
+                "name": "require",
+                "ctype": "miscellaneous",
+                "subtype": "variable",
+                "file": "src/lib/chartjs.component.ts",
+                "type": "any"
+            }
+        ],
+        "functions": [
+            {
+                "name": "colorize",
+                "file": "src/app/bubble-example/bubble-example.component.ts",
+                "ctype": "miscellaneous",
+                "subtype": "function",
+                "description": "",
+                "args": [
+                    {
+                        "name": "opaque",
+                        "type": ""
+                    },
+                    {
+                        "name": "context",
+                        "type": ""
+                    }
+                ],
+                "jsdoctags": [
+                    {
+                        "name": "opaque",
+                        "type": "",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "context",
+                        "type": "",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "getRandomInt",
+                "file": "src/app/dynamic-doughnut-example/dynamic-doughnut-example.component.ts",
+                "ctype": "miscellaneous",
+                "subtype": "function",
+                "description": "",
+                "args": [
+                    {
+                        "name": "min",
+                        "type": ""
+                    },
+                    {
+                        "name": "max",
+                        "type": ""
+                    }
+                ],
+                "jsdoctags": [
+                    {
+                        "name": "min",
+                        "type": "",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "max",
+                        "type": "",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "main",
+                "file": "build.ts",
+                "ctype": "miscellaneous",
+                "subtype": "function",
+                "description": "",
+                "args": []
+            },
+            {
+                "name": "rand",
+                "file": "src/app/mixed-data-example/mixed-data-example.component.ts",
+                "ctype": "miscellaneous",
+                "subtype": "function",
+                "description": "",
+                "args": [
+                    {
+                        "name": "min",
+                        "type": ""
+                    },
+                    {
+                        "name": "max",
+                        "type": ""
+                    }
+                ],
+                "jsdoctags": [
+                    {
+                        "name": "min",
+                        "type": "",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    },
+                    {
+                        "name": "max",
+                        "type": "",
+                        "tagName": {
+                            "text": "param"
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "randomScalingFactor",
+                "file": "src/app/mixed-data-example/mixed-data-example.component.ts",
+                "ctype": "miscellaneous",
+                "subtype": "function",
+                "description": "",
+                "args": []
+            }
+        ],
+        "typealiases": [],
+        "enumerations": [],
+        "groupedVariables": {
+            "src/app/mixed-data-example/mixed-data-example.component.ts": [
+                {
+                    "name": "_seed",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/app/mixed-data-example/mixed-data-example.component.ts",
+                    "type": "",
+                    "defaultValue": "Math.random() * 100"
+                }
+            ],
+            "src/test.ts": [
+                {
+                    "name": "context",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/test.ts",
+                    "type": "",
+                    "defaultValue": "require.context('./', true, /\\.spec\\.ts$/)"
+                },
+                {
+                    "name": "require",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/test.ts",
+                    "type": "any"
+                }
+            ],
+            "src/environments/environment.prod.ts": [
+                {
+                    "name": "environment",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/environments/environment.prod.ts",
+                    "type": "object",
+                    "defaultValue": "{\n  production: true\n}"
+                }
+            ],
+            "src/environments/environment.ts": [
+                {
+                    "name": "environment",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/environments/environment.ts",
+                    "type": "object",
+                    "defaultValue": "{\n  production: false\n}"
+                }
+            ],
+            "src/lib/chartjs.component.ts": [
+                {
+                    "name": "require",
+                    "ctype": "miscellaneous",
+                    "subtype": "variable",
+                    "file": "src/lib/chartjs.component.ts",
+                    "type": "any"
+                }
+            ]
+        },
+        "groupedFunctions": {
+            "src/app/bubble-example/bubble-example.component.ts": [
+                {
+                    "name": "colorize",
+                    "file": "src/app/bubble-example/bubble-example.component.ts",
+                    "ctype": "miscellaneous",
+                    "subtype": "function",
+                    "description": "",
+                    "args": [
+                        {
+                            "name": "opaque",
+                            "type": ""
+                        },
+                        {
+                            "name": "context",
+                            "type": ""
+                        }
+                    ],
+                    "jsdoctags": [
+                        {
+                            "name": "opaque",
+                            "type": "",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        },
+                        {
+                            "name": "context",
+                            "type": "",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "src/app/dynamic-doughnut-example/dynamic-doughnut-example.component.ts": [
+                {
+                    "name": "getRandomInt",
+                    "file": "src/app/dynamic-doughnut-example/dynamic-doughnut-example.component.ts",
+                    "ctype": "miscellaneous",
+                    "subtype": "function",
+                    "description": "",
+                    "args": [
+                        {
+                            "name": "min",
+                            "type": ""
+                        },
+                        {
+                            "name": "max",
+                            "type": ""
+                        }
+                    ],
+                    "jsdoctags": [
+                        {
+                            "name": "min",
+                            "type": "",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        },
+                        {
+                            "name": "max",
+                            "type": "",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "build.ts": [
+                {
+                    "name": "main",
+                    "file": "build.ts",
+                    "ctype": "miscellaneous",
+                    "subtype": "function",
+                    "description": "",
+                    "args": []
+                }
+            ],
+            "src/app/mixed-data-example/mixed-data-example.component.ts": [
+                {
+                    "name": "rand",
+                    "file": "src/app/mixed-data-example/mixed-data-example.component.ts",
+                    "ctype": "miscellaneous",
+                    "subtype": "function",
+                    "description": "",
+                    "args": [
+                        {
+                            "name": "min",
+                            "type": ""
+                        },
+                        {
+                            "name": "max",
+                            "type": ""
+                        }
+                    ],
+                    "jsdoctags": [
+                        {
+                            "name": "min",
+                            "type": "",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        },
+                        {
+                            "name": "max",
+                            "type": "",
+                            "tagName": {
+                                "text": "param"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "randomScalingFactor",
+                    "file": "src/app/mixed-data-example/mixed-data-example.component.ts",
+                    "ctype": "miscellaneous",
+                    "subtype": "function",
+                    "description": "",
+                    "args": []
+                }
+            ]
+        },
+        "groupedEnumerations": {},
+        "groupedTypeAliases": {}
+    },
+    "routes": [],
+    "coverage": {
+        "count": 0,
+        "status": "low",
+        "files": [
+            {
+                "filePath": "build.ts",
+                "type": "function",
+                "linksubtype": "function",
+                "name": "main",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/app.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "AppComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/bar-example/bar-example.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "BarExampleComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/3",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/bubble-example/bubble-example.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "BubbleExampleComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/4",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/bubble-example/bubble-example.component.ts",
+                "type": "function",
+                "linksubtype": "function",
+                "name": "colorize",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/crazy-data-line-example/crazy-data-line-example.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "CrazyDataLineExampleComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/4",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/doughnut-example/doughnut-example.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "DoughnutExampleComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/2",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/dynamic-doughnut-example/dynamic-doughnut-example.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "DynamicDoughnutExampleComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/4",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/dynamic-doughnut-example/dynamic-doughnut-example.component.ts",
+                "type": "function",
+                "linksubtype": "function",
+                "name": "getRandomInt",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/horizontal-bar-example/horizontal-bar-example.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "HorizontalBarExampleComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/5",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/legend-handlers-example/legend-handlers-example.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "LegendHandlersExampleComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/3",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/legend-options-example/legend-options-example.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "LegendOptionsExampleComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/5",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/line-example/line-example.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "LineExampleComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/2",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/mixed-data-example/mixed-data-example.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "MixedDataExampleComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/4",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/mixed-data-example/mixed-data-example.component.ts",
+                "type": "function",
+                "linksubtype": "function",
+                "name": "rand",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/mixed-data-example/mixed-data-example.component.ts",
+                "type": "function",
+                "linksubtype": "function",
+                "name": "randomScalingFactor",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/mixed-data-example/mixed-data-example.component.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "_seed",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/pie-example/pie-example.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "PieExampleComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/4",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/polar-example/polar-example.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "PolarExampleComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/3",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/radar-example/radar-example.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "RadarExampleComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/2",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/randomized-data-line-example/randomized-data-line-example.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "RandomizedDataLineExampleComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/3",
+                "status": "low"
+            },
+            {
+                "filePath": "src/app/scatter-example/scatter-example.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "ScatterExampleComponent",
+                "coveragePercent": 0,
+                "coverageCount": "0/3",
+                "status": "low"
+            },
+            {
+                "filePath": "src/environments/environment.prod.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "environment",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/environments/environment.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "environment",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/lib/chartjs.component.ts",
+                "type": "component",
+                "linktype": "component",
+                "name": "ChartjsComponent",
+                "coveragePercent": 5,
+                "coverageCount": "1/20",
+                "status": "low"
+            },
+            {
+                "filePath": "src/lib/chartjs.component.ts",
+                "type": "interface",
+                "linktype": "interface",
+                "name": "ChartClickEvent",
+                "coveragePercent": 0,
+                "coverageCount": "0/5",
+                "status": "low"
+            },
+            {
+                "filePath": "src/lib/chartjs.component.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "require",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/test.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "context",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            },
+            {
+                "filePath": "src/test.ts",
+                "type": "variable",
+                "linktype": "miscellaneous",
+                "linksubtype": "variable",
+                "name": "require",
+                "coveragePercent": 0,
+                "coverageCount": "0/1",
+                "status": "low"
+            }
+        ]
+    }
+}

@@ -1,0 +1,20 @@
+import { moduleMetadata } from '@storybook/angular';
+import { Meta, Story, Props } from '@storybook/addon-docs/blocks';
+import { BarExampleComponent } from './bar-example.component.ts';
+import { ChartjsModule } from '../../lib/chartjs.module.ts';
+import { ChartjsComponent } from '../../lib/chartjs.component.ts';
+
+<Meta title='Charts' />
+
+# Bar example (custom size)
+
+<Story name='Bar' height='400px'>
+  {{
+    component: BarExampleComponent,
+    props: {}
+  }}
+</Story>
+
+## Props
+
+<Props of={ChartjsComponent} />
